@@ -59,6 +59,16 @@ data class BookingDate(
     val day: String
 )
 
+data class BookingHistoryItem(
+    val movieTitle: String,
+    val cinema: String,
+    val date: String,
+    val time: String,
+    val seats: String,
+    val bookingId: String,
+    val status: String // Upcoming, Completed, Cancelled
+)
+
 // ----- SAMPLE DATA -----
 
 private val sampleDates = listOf(
@@ -96,6 +106,46 @@ private val sampleMovies = listOf(
         language = "English",
         showTimes = listOf("09:45", "13:00", "17:40", "21:10"),
         certificate = "U/A"
+    )
+)
+
+// booking history sample
+private val sampleBookings = listOf(
+    BookingHistoryItem(
+        movieTitle = "The Last Stand",
+        cinema = "PVR Phoenix MarketCity",
+        date = "Mon, 03 Feb 2025",
+        time = "07:30 PM",
+        seats = "A5, A6",
+        bookingId = "FN-2025-001",
+        status = "Upcoming"
+    ),
+    BookingHistoryItem(
+        movieTitle = "Love in Paris",
+        cinema = "INOX City Centre",
+        date = "Sun, 02 Feb 2025",
+        time = "04:15 PM",
+        seats = "C10, C11",
+        bookingId = "FN-2025-000",
+        status = "Completed"
+    ),
+    BookingHistoryItem(
+        movieTitle = "Galaxy Quest",
+        cinema = "SPI Sathyam",
+        date = "Fri, 31 Jan 2025",
+        time = "09:45 PM",
+        seats = "B2, B3, B4",
+        bookingId = "FN-2025-998",
+        status = "Completed"
+    ),
+    BookingHistoryItem(
+        movieTitle = "Comedy Night",
+        cinema = "PVR VR Mall",
+        date = "Thu, 30 Jan 2025",
+        time = "06:00 PM",
+        seats = "D7, D8",
+        bookingId = "FN-2025-997",
+        status = "Cancelled"
     )
 )
 
@@ -141,8 +191,8 @@ fun BookingScreen(
                     }
                 )
 
-                1 -> MyBookingsPlaceholder()
-                2 -> ProfilePlaceholder()
+                1 -> MyBookingsScreen(bookings = sampleBookings)
+                2 -> ProfileScreen()
             }
         }
     }
@@ -367,37 +417,152 @@ fun MovieCard(
     }
 }
 
-// ----- MY BOOKINGS TAB PLACEHOLDER -----
+// ----- MY BOOKINGS TAB (HISTORY) -----
 
 @Composable
-fun MyBookingsPlaceholder() {
-    Box(
+fun MyBookingsScreen(bookings: List<BookingHistoryItem>) {
+    val upcoming = bookings.filter { it.status == "Upcoming" }
+    val others = bookings.filter { it.status != "Upcoming" }
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .verticalScroll(rememberScrollState())
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = "My Bookings",
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+            color = Color(0xFF4E342E)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "View your upcoming shows and booking history.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color(0xFF5D4037)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (upcoming.isNotEmpty()) {
             Text(
-                text = "My Bookings",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                text = "Upcoming",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = Color(0xFF4E342E)
             )
             Spacer(modifier = Modifier.height(8.dp))
+            upcoming.forEach { booking ->
+                BookingCard(booking)
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        Text(
+            text = "History",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = Color(0xFF4E342E)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (others.isEmpty()) {
             Text(
-                text = "Your upcoming and past tickets will appear here.",
+                text = "You have no past bookings yet.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF5D4037),
-                textAlign = TextAlign.Center
+                color = Color(0xFF5D4037)
+            )
+        } else {
+            others.forEach { booking ->
+                BookingCard(booking)
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+fun BookingCard(booking: BookingHistoryItem) {
+    val statusColor = when (booking.status) {
+        "Upcoming" -> Color(0xFF2E7D32)
+        "Completed" -> Color(0xFF1565C0)
+        "Cancelled" -> Color(0xFFC62828)
+        else -> Color(0xFF5D4037)
+    }
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFFFF8E1)
+        ),
+        elevation = CardDefaults.cardElevation(2.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = booking.movieTitle,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color(0xFF4E342E)
+                    )
+                    Text(
+                        text = booking.cinema,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF6D4C41)
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = statusColor
+                ) {
+                    Text(
+                        text = booking.status,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "${booking.date} • ${booking.time}",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF5D4037)
+            )
+            Text(
+                text = "Seats: ${booking.seats}",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF5D4037)
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Booking ID: ${booking.bookingId}",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFF8D6E63)
             )
         }
     }
 }
 
-// ----- PROFILE TAB PLACEHOLDER -----
+// ----- PROFILE TAB -----
 
 @Composable
-fun ProfilePlaceholder() {
+fun ProfileScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -410,34 +575,125 @@ fun ProfilePlaceholder() {
             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
             color = Color(0xFF4E342E)
         )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = "In a real app, you can show user details, preferences, and payment methods here.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF5D4037),
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(24.dp))
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Basic user info
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = Color(0xFFFFF8E1),
             tonalElevation = 2.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
+            Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    "Sample user:",
-                    fontWeight = FontWeight.SemiBold,
+                    text = "Account",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = Color(0xFF4E342E)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text("Name: FlicksNow User")
                 Text("Email: user@example.com")
+                Text("Phone: +91 98765 43210")
                 Text("Preferred City: Chennai")
             }
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Membership info
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFFFFE0B2),
+            tonalElevation = 2.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Membership",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = Color(0xFF4E342E)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Tier: Gold Member")
+                Text("Points: 2,450")
+                Text("Benefits: No booking fee, priority support, birthday offers")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Preferences
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFFFFF8E1),
+            tonalElevation = 2.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Preferences",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = Color(0xFF4E342E)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Favourite Genres:")
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PreferenceChip("Action")
+                    PreferenceChip("Sci-Fi")
+                    PreferenceChip("Romance")
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("Preferred Cinemas:")
+                Spacer(modifier = Modifier.height(6.dp))
+                Column {
+                    Text("• PVR Phoenix MarketCity")
+                    Text("• SPI Sathyam")
+                    Text("• INOX City Centre")
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Payment info (sample)
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFFFFE0B2),
+            tonalElevation = 2.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Saved Payment",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = Color(0xFF4E342E)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Primary Card: **** 4821 (Visa)")
+                Text("UPI: flicksnow@upi")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+fun PreferenceChip(label: String) {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = Color(0xFFFFE0B2)
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = Color(0xFF4E342E)
+        )
     }
 }
 
