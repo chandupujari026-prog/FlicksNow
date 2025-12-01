@@ -23,10 +23,11 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".LoginActivity"
-            android:exported="true"
-            android:label="FlicksNow"
-            android:theme="@style/Theme.FlicksNow" />
+            android:name=".LoginActivity"/>
+        <activity
+            android:name=".BookingActivity"/>
+        <activity
+            android:name=".SignupActivity"/>
     </application>
 
 </manifest>

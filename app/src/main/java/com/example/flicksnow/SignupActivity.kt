@@ -9,7 +9,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,7 +21,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -30,23 +30,21 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 
-class LoginActivity : ComponentActivity() {
+class SignupActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             FlicksNowTheme {
-                LoginScreen(
-                    onLoginSuccess = {
-                        // For now: go straight to Booking page
-                        startActivity(Intent(this, BookingActivity::class.java))
+                SignupScreen(
+                    onSignupSuccess = {
+                        // For now: go back to Login screen
+                        startActivity(Intent(this, LoginActivity::class.java))
                         finish()
                     },
-                    onNavigateToSignup = {
-                        startActivity(Intent(this, SignupActivity::class.java))
-                    },
-                    onForgotPassword = {
-                        // TODO: Implement reset flow or open a screen / web page
+                    onNavigateToLogin = {
+                        startActivity(Intent(this, LoginActivity::class.java))
+                        finish()
                     }
                 )
             }
@@ -56,50 +54,70 @@ class LoginActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(
-    onLoginSuccess: () -> Unit,
-    onNavigateToSignup: () -> Unit,
-    onForgotPassword: () -> Unit
+fun SignupScreen(
+    onSignupSuccess: () -> Unit,
+    onNavigateToLogin: () -> Unit
 ) {
     val focus = LocalFocusManager.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    var fullName by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
-    var rememberMe by rememberSaveable { mutableStateOf(false) }
+    var confirmPassword by rememberSaveable { mutableStateOf("") }
     var showPassword by rememberSaveable { mutableStateOf(false) }
+    var showConfirmPassword by rememberSaveable { mutableStateOf(false) }
 
+    var nameError by rememberSaveable { mutableStateOf<String?>(null) }
     var emailError by rememberSaveable { mutableStateOf<String?>(null) }
     var passwordError by rememberSaveable { mutableStateOf<String?>(null) }
+    var confirmPasswordError by rememberSaveable { mutableStateOf<String?>(null) }
+
     var isLoading by rememberSaveable { mutableStateOf(false) }
 
     fun validate(): Boolean {
+        nameError = if (fullName.isBlank()) "Name is required" else null
+
         emailError = when {
             email.isBlank() -> "Email is required"
             !Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches() -> "Enter a valid email"
             else -> null
         }
+
         passwordError = when {
             password.isBlank() -> "Password is required"
             password.length < 6 -> "Minimum 6 characters"
             else -> null
         }
-        return emailError == null && passwordError == null
+
+        confirmPasswordError = when {
+            confirmPassword.isBlank() -> "Please confirm password"
+            confirmPassword != password -> "Passwords do not match"
+            else -> null
+        }
+
+        return nameError == null &&
+                emailError == null &&
+                passwordError == null &&
+                confirmPasswordError == null
     }
 
-    // TODO: replace with real Firebase sign-in later
-    suspend fun fakeSignIn(email: String, password: String): Boolean {
-        delay(1000)
+    // TODO: Replace with real Firebase sign-up later
+    suspend fun fakeSignUp(
+        name: String,
+        email: String,
+        password: String
+    ): Boolean {
+        delay(1200)
         return true // always succeeds for now
     }
 
-    // Light gradient background (top to bottom)
     val gradient = Brush.verticalGradient(
         colors = listOf(
-            Color(0xFFFDFBFB), // light cream/white
-            Color(0xFFECEFF1), // soft grey tone
-            Color(0xFFD6EAF8)  // light blue tint
+            Color(0xFFFDFBFB),
+            Color(0xFFECEFF1),
+            Color(0xFFD6EAF8)
         )
     )
 
@@ -116,27 +134,36 @@ fun LoginScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.Center,
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Spacer(Modifier.height(32.dp))
+
                 Text(
-                    "Welcome to FlicksNow",
-                    style = MaterialTheme.typography.headlineMedium,
+                    text = "Create your FlicksNow account",
+                    style = MaterialTheme.typography.headlineSmall,
                     textAlign = TextAlign.Center,
                     color = Color(0xFF212121)
                 )
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(24.dp))
 
-                Text(
-                    "Sign in to book your next movie",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    color = Color(0xFF616161)
+                OutlinedTextField(
+                    value = fullName,
+                    onValueChange = {
+                        fullName = it
+                        if (nameError != null) nameError = null
+                    },
+                    label = { Text("Full name") },
+                    singleLine = true,
+                    isError = nameError != null,
+                    supportingText = { if (nameError != null) Text(nameError!!) },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(12.dp))
 
                 OutlinedTextField(
                     value = email,
@@ -148,10 +175,7 @@ fun LoginScreen(
                     singleLine = true,
                     isError = emailError != null,
                     supportingText = { if (emailError != null) Text(emailError!!) },
-                    keyboardOptions = KeyboardOptions(
-                        imeAction = ImeAction.Next,
-                        keyboardType = KeyboardType.Email
-                    ),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -166,7 +190,7 @@ fun LoginScreen(
                     label = { Text("Password") },
                     singleLine = true,
                     isError = passwordError != null,
-                    supportingText = { if (passwordError != null) Text(passwordError!!) },
+                    supportingText = { if (passwordError != null) Text(password!!) },
                     visualTransformation = if (showPassword) {
                         VisualTransformation.None
                     } else {
@@ -182,49 +206,42 @@ fun LoginScreen(
                                 .clickable { showPassword = !showPassword }
                         )
                     },
-                    keyboardOptions = KeyboardOptions(
-                        imeAction = ImeAction.Done,
-                        keyboardType = KeyboardType.Password
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onDone = {
-                            focus.clearFocus()
-                            if (!isLoading && validate()) {
-                                isLoading = true
-                                scope.launch {
-                                    val ok = fakeSignIn(email.trim(), password)
-                                    isLoading = false
-                                    if (ok) onLoginSuccess()
-                                    else snackbarHostState.showSnackbar("Invalid credentials")
-                                }
-                            }
-                        }
-                    ),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
-                            checked = rememberMe,
-                            onCheckedChange = { rememberMe = it }
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = {
+                        confirmPassword = it
+                        if (confirmPasswordError != null) confirmPasswordError = null
+                    },
+                    label = { Text("Confirm password") },
+                    singleLine = true,
+                    isError = confirmPasswordError != null,
+                    supportingText = { if (confirmPasswordError != null) Text(confirmPasswordError!!) },
+                    visualTransformation = if (showConfirmPassword) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
+                    trailingIcon = {
+                        Text(
+                            if (showConfirmPassword) "HIDE" else "SHOW",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .clickable { showConfirmPassword = !showConfirmPassword }
                         )
-                        Text("Remember me")
-                    }
-                    Text(
-                        "Forgot password?",
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable { onForgotPassword() }
-                    )
-                }
+                    },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(24.dp))
 
                 Button(
                     onClick = {
@@ -232,10 +249,18 @@ fun LoginScreen(
                         if (!isLoading && validate()) {
                             isLoading = true
                             scope.launch {
-                                val ok = fakeSignIn(email.trim(), password)
+                                val ok = fakeSignUp(
+                                    fullName.trim(),
+                                    email.trim(),
+                                    password
+                                )
                                 isLoading = false
-                                if (ok) onLoginSuccess()
-                                else snackbarHostState.showSnackbar("Invalid credentials")
+                                if (ok) {
+                                    snackbarHostState.showSnackbar("Account created! Please sign in.")
+                                    onSignupSuccess()
+                                } else {
+                                    snackbarHostState.showSnackbar("Sign up failed. Try again.")
+                                }
                             }
                         }
                     },
@@ -250,23 +275,26 @@ fun LoginScreen(
                             modifier = Modifier.size(22.dp)
                         )
                     } else {
-                        Text("Sign in")
+                        Text("Create account")
                     }
                 }
 
                 Spacer(Modifier.height(16.dp))
 
-                Row {
-                    Text("New here? ")
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Already have an account? ")
                     Text(
-                        "Create an account",
+                        text = "Sign in",
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable { onNavigateToSignup() }
+                        modifier = Modifier.clickable { onNavigateToLogin() }
                     )
                 }
+
+                Spacer(Modifier.height(24.dp))
             }
         }
     }
 }
-
-
